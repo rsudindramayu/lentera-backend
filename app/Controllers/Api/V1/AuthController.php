@@ -160,4 +160,63 @@ class AuthController extends ResourceController
             ], ResponseInterface::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function fetchUser()
+    {
+        try {
+            // Ambil data token JWT dari header Authorization
+            $authHeader = $this->request->getHeaderLine('Authorization');
+
+            if (!$authHeader || !str_contains($authHeader, 'Bearer ')) {
+                return $this->respond([
+                    'status' => false,
+                    'message' => 'Access token tidak ditemukan!',
+                ], ResponseInterface::HTTP_UNAUTHORIZED);
+            }
+
+            $token = trim(str_replace('Bearer', '', $authHeader));
+            $isAccessTokenValid = $this->authService->verifyAccessToken($token);
+
+            if (!$isAccessTokenValid) {
+                return $this->respond([
+                    'status' => false,
+                    'message' => 'Token tidak valid atau kadaluarsa!',
+                ], ResponseInterface::HTTP_UNAUTHORIZED);
+            }
+
+            $resultPengguna = $this->penggunaService->getData([
+                'where' => [
+                    'ID' => $isAccessTokenValid->uid,
+                    'STATUS' => 1,
+                ],
+                'limit' => 1
+            ]);
+
+            if (count($resultPengguna) < 0) {
+                return $this->respond([
+                    'status' => false,
+                    'message' => 'Pengguna tidak ditemukan!',
+                ], ResponseInterface::HTTP_UNAUTHORIZED);
+            }
+
+            $user = $resultPengguna[0];
+            $user['roles'] = $this->penggunaService->getRolesWithPermissions($user['ID']);
+            $dataUser = $this->penggunaService->getDataUser($user);
+
+            return $this->respond([
+                'status' => true,
+                'message' => 'Pengguna ditemukan',
+                'data' => [
+                    'user' => $dataUser,
+                    'roles' => $user['roles'],
+                ]
+            ], ResponseInterface::HTTP_OK);
+        } catch (\Exception $e) {
+            $code = $e->getCode() === 401 ? ResponseInterface::HTTP_UNAUTHORIZED : ResponseInterface::HTTP_INTERNAL_SERVER_ERROR;
+            return $this->respond([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], $code);
+        }
+    }
 }

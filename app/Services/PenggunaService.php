@@ -58,7 +58,7 @@ class PenggunaService
 
         // Pagination
         if (!empty($params['paginate'])) {
-            $perPage = $params['perPage'] ?? getenv('DEFAULT_PAGINATE');
+            $perPage = $params['perPage'] ?? getenv('DEFAULT_PAGINATE_LIMIT');
             $group = $params['pagerGroup'] ?? 'default';
 
             $result = $this->penggunaModel->paginate($perPage, $group);

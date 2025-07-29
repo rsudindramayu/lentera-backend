@@ -11,10 +11,12 @@ use App\Models\RefreshTokenModel;
 class AuthService
 {
     protected $jwtKey;
+    protected $penggunaService;
 
     public function __construct()
     {
         $this->jwtKey = getenv('JWT_KEY');
+        $this->penggunaService = new PenggunaService();
     }
 
     public function generateAccessToken($user)
@@ -23,7 +25,7 @@ class AuthService
             'iss' => 'localhost',
             'aud' => 'localhost',
             'iat' => time(),
-            'exp' => time() + 900, // 15 minutes
+            'exp' => time() + 60, // 15 minutes
             'uid' => $user['ID'],
             'roles' => $user['roles'],
         ];
@@ -45,23 +47,34 @@ class AuthService
 
     public function verifyAccessToken($token)
     {
-        $decodeToken =  JWT::decode($token, new Key($this->jwtKey, 'HS256'));
+        try {
+            $decodeToken = JWT::decode($token, new Key($this->jwtKey, 'HS256'));
 
-        //cek apakah token expired
-        if ($decodeToken->exp < time()) {
-            return false;
-        }
+            if ($decodeToken->exp < time()) {
+                return false;
+            }
 
-        //cek apakah token dapat digunakan
-        if ($decodeToken->iat > time()) {
-            return false;
-        }
+            if ($decodeToken->iat > time()) {
+                return false;
+            }
 
-        //cek apakah user ada
-        $penggunaModel = new PenggunaModel();
-        $user = $penggunaModel->where('ID', $decodeToken->uid)->where('STATUS', 1)->first();
-        if (!$user) {
-            return false;
+            $penggunaModel = new PenggunaModel();
+            $user = $penggunaModel
+                ->where('ID', $decodeToken->uid)
+                ->where('STATUS', 1)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            return $decodeToken;
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            throw new \Exception("Token kadaluarsa", 401);
+        } catch (\Firebase\JWT\SignatureInvalidException $e) {
+            throw new \Exception("Token tidak valid", 401);
+        } catch (\Exception $e) {
+            throw new \Exception("Invalid token: " . $e->getMessage(), 401);
         }
     }
 
