@@ -124,7 +124,7 @@ class DisplayReservasiService
             ) AS totalPasienNonBPJS,
                 COALESCE((
                 SELECT sp.STATUS 
-                FROM status_pendaftaran sp 
+                FROM lentera-antrol.status_pendaftaran sp 
                 WHERE sp.TANGGAL = '" . $tanggalKunjungan . "'
                 AND sp.DOKTER = jadwal_dokter_hfis.KD_DOKTER
                 LIMIT 1
