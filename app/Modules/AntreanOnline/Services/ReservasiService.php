@@ -16,7 +16,7 @@ class ReservasiService
     {
         $this->reservasiModel = new ReservasiModel();
         $this->antreanService = new AntreanService();
-        $this->db = Database::connect('regonline');
+        $this->db = Database::connect();
     }
 
     public function getData($params)

@@ -236,4 +236,107 @@ class AntreanOnsiteService
         if ($query->getNumRows() > 0) return ['status' => true, 'data' => $query->getResultArray()];
         return ['status' => false];
     }
+
+    // public function updateLogReservasi($nomorBooking)
+    // {
+    //     $builder = $this->db->connect('');
+    //     $builder = $this->db->table('log_reservasi');
+    //     $builder->set([
+    //         'STATUS' => 99,
+    //         'RESPONSE' => 'DIBATALKAN',
+    //     ]);
+    //     $builder->where('kodebooking', $nomorBooking);
+    //     $builder->update();
+    // }
+
+    // public function generateKodeBooking($tanggal)
+    // {
+    //     $query = $this->db->query("SELECT generatorReservasi('" . $tanggal . "') as nomorBooking");
+    //     $result = $query->getResult();
+    //     $nomorBooking = "";
+    //     if (count($result) > 0) {
+    //         $nomorBooking = $result[0]->nomorBooking;
+    //     }
+    //     return $nomorBooking;
+    // }
+
+    // public function generateNomorAntrean($pos, $tanggal, $caraBayar)
+    // {
+    //     $query = $this->db->query("SELECT getNomorAntrian('" . $pos . "','" . $tanggal . "'," . $caraBayar . " ) as nomorAntrean");
+    //     $result = $query->getResult();
+    //     $nomorAntrean = "";
+    //     if (count($result) > 0) {
+    //         $nomorAntrean = $result[0]->nomorAntrean;
+    //     }
+    //     return $nomorAntrean;
+    // }
+
+    // public function generateNomorAntreanPoli($idRuangan, $tanggal)
+    // {
+    //     $query = $this->db->query("SELECT generateNoAntrianPoli('" . $idRuangan . "','" . $tanggal . "') as nomorAntreanPoli");
+    //     $result = $query->getResult();
+    //     $nomorAntreanPoli = "";
+    //     if (count($result) > 0) {
+    //         $nomorAntreanPoli = $result[0]->nomorAntreanPoli;
+    //     }
+    //     return $nomorAntreanPoli;
+    // }
+
+    // public function generateNomorAntreanBPJS($tanggal, $kodePoli, $kodeDokter, $jamLayanan)
+    // {
+    //     $query = $this->db->query("SELECT generateNoAntrianBpjs('" . $tanggal . "','" . $kodePoli . "','" . $kodeDokter . "','" . $jamLayanan . "') as nomorAntreanBPJS");
+    //     $result = $query->getResult();
+    //     $nomorAntreanBPJS = "";
+    //     if (count($result) > 0) {
+    //         $nomorAntreanBPJS = $result[0]->nomorAntreanBPJS;
+    //     }
+    //     return $nomorAntreanBPJS;
+    // }
+
+    // public function generateJamAntrean($nomorAntrean, $pos, $idRuangan, $tanggal)
+    // {
+    //     $query = $this->db->query("SELECT getJamAntrian(" . $nomorAntrean . ",'" . $pos . "','" . $idRuangan . "','" . $tanggal . "') as jamAntrean");
+    //     $result = $query->getResult();
+    //     $jamAntrean = "";
+    //     if (count($result) > 0) {
+    //         $jamAntrean = $result[0]->jamAntrean;
+    //     }
+    //     return $jamAntrean;
+    // }
+
+    // public function generateJamPelayanan($nomorAntrean, $pos, $idRuangan, $tanggal)
+    // {
+    //     $query = $this->db->query("SELECT getJamPelayanan(" . $nomorAntrean . ",'" . $pos . "','" . $idRuangan . "','" . $tanggal . "') as jamPelayanan");
+    //     $result = $query->getResult();
+    //     $jamPelayanan = "";
+    //     if (count($result) > 0) {
+    //         $jamPelayanan = $result[0]->jamPelayanan;
+    //     }
+    //     return $jamPelayanan;
+    // }
+
+    // public function getKuotaAntrian($idRefJadwal, $kodeDokter)
+    // {
+    //     $builder = $this->db->table('regonline.jadwal_dokter_hfis');
+    //     $builder->where('ID', $idRefJadwal)->where('KD_DOKTER', $kodeDokter);
+    //     $query = $builder->get()->getResultArray();
+    //     $kuota = [];
+    //     if (count($query) > 0) {
+    //         $kuota = [
+    //             'KUOTA_JKN' => $query[0]['KOUTA_JKN'],
+    //             'KUOTA_NON_JKN' => $query[0]['KOUTA_NON_JKN'],
+    //         ];
+    //     }
+
+    //     return $kuota;
+    // }
+
+    // public function getReservasiPasien($params = [], $tanggalKunjungan)
+    // {
+    //     $reservasiPasien = $this->where($params['key'], $params['value'])
+    //         ->where('TANGGALKUNJUNGAN', $tanggalKunjungan)
+    //         ->where('JENIS_APLIKASI', 2)
+    //         ->findAll();
+    //     return $reservasiPasien;
+    // }
 }
