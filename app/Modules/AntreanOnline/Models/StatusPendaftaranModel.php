@@ -25,5 +25,4 @@ class StatusPendaftaranModel extends Model
     protected $dateFormat    = 'datetime';
     protected $createdField  = 'CREATED_AT';
     protected $updatedField  = 'UPDATED_AT';
-    protected $DBGroup       = 'replikasi';
 }
