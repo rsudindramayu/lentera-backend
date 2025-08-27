@@ -171,6 +171,40 @@ class RequestService
         }
     }
 
+    public function sendServiceSIMRSRequest($method, $url, $content = null)
+    {
+        try {
+            $endPoint = $url;
+            $req = $this->client->request($method, $endPoint, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+
+            $statusCode = $req->getStatusCode();
+            if ($statusCode == 200) {
+                $body = $req->getBody();
+                $result = json_decode($body, true);
+                if (isset($result['data']) && count($result['data']) > 0) {
+                    return [
+                        'status' => true,
+                        'data' => $result['data']
+                    ];
+                }
+            }
+            return [
+                'status' => false,
+                'message' => 'Jadwal dokter tidak ditemukan'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
     private function generateSignature()
     {
         date_default_timezone_set('UTC');

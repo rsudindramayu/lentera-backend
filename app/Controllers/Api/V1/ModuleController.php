@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Controllers\Api\V1;
+
+use App\Services\ModuleService;
+use CodeIgniter\HTTP\ResponseInterface;
+use CodeIgniter\RESTful\ResourceController;
+use Config\Services;
+
+class ModuleController extends ResourceController
+{
+    protected $moduleService;
+    protected $validation;
+
+    public function __construct()
+    {
+        $this->moduleService = new ModuleService();
+        $this->validation = Services::validation();
+    }
+
+    public function getModules(): ResponseInterface
+    {
+        try {
+            $params = $this->request->getGet();
+            $result = $this->moduleService->getModules($params);
+            if ($result['status']) {
+                return $this->respond(['status' => true, 'message' => 'Data ditemukan!', 'data' => $result['data']], ResponseInterface::HTTP_OK);
+            }
+
+            return $this->respond(['status' => false, 'message' => 'Data tidak ditemukan!'], ResponseInterface::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->respond([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], ResponseInterface::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function addModule(): ResponseInterface
+    {
+        $this->validation->setRules([
+            'key' => [
+                'label'  => 'Nama modul',
+                'rules'  => 'required|trim|regex_match[/^\S+$/]',
+                'errors' => [
+                    'required'    => '{field} wajib diisi.',
+                    'regex_match' => '{field} tidak boleh mengandung spasi.',
+                ],
+            ],
+            'feature_id' => [
+                'label'  => 'Fitur',
+                'rules'  => 'required',
+                'errors' => [
+                    'required' => '{field} wajib pilih fitur.',
+                ],
+            ],
+        ]);
+
+        if (!$this->validation->withRequest($this->request)->run()) {
+            return $this->respond([
+                'status' => false,
+                'message' => $this->validation->getErrors(),
+            ], ResponseInterface::HTTP_BAD_REQUEST);
+        }
+        try {
+            $params = (array)$this->request->getJSON();
+            $result = $this->moduleService->create($params);
+            if ($result['status']) {
+                return $this->respond(['status' => true, 'message' => 'Data berhasil disimpan!'], ResponseInterface::HTTP_CREATED);
+            }
+
+            return $this->respond(['status' => false, 'message' => 'Data gagal disimpan!'], ResponseInterface::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->respond([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], ResponseInterface::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function updateModule($id): ResponseInterface
+    {
+        try {
+            $params = (array)$this->request->getJSON();
+            $result = $this->moduleService->update($id, $params);
+            if ($result['status']) {
+                return $this->respond(['status' => true, 'message' => 'Data berhasil diupdate!']);
+            }
+
+            return $this->respond(['status' => false, 'message' => 'Data gagal diupdate!'], ResponseInterface::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->respond([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], ResponseInterface::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+}

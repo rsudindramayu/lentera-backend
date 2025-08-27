@@ -84,41 +84,119 @@ class PenggunaService
         return $this->penggunaModel->findAll();
     }
 
+    public function getPengguna($params)
+    {
+        // pagination
+        $perPage = isset($params['limit']) ? (int)$params['limit'] : (int)getenv('DEFAULT_PAGINATE_LIMIT');
+        $page    = isset($params['page'])  ? (int)$params['page']  : 1;
+        $offset  = ($page - 1) * $perPage;
+
+        // === BASE (tanpa select/order/group) ===
+        $base = $this->penggunaModel->builder();         // pastikan model table= penguna (schema + alias jika perlu)
+        // $base->from('lentera.pengguna pengguna');     // pakai ini kalau model tidak set table+alias
+
+        $base->join('lentera.user_roles ur', 'ur.pengguna_id = pengguna.ID', 'left');
+        $base->join('lentera.roles r',       'r.id = ur.role_id',          'left');
+        $base->where('pengguna.STATUS !=', 0);
+
+        // search
+        if (!empty($params['search'])) {
+            $term = trim($params['search']);
+
+            $db = \Config\Database::connect();
+
+            $likeNamaLengkap = $db->escape('%' . $db->escapeLikeString($term) . '%');
+
+            $base->groupStart()
+                ->like('pengguna.LOGIN', $term, 'both')
+                ->orWhere("master.getNamaLengkapPegawai(pengguna.NIP) LIKE {$likeNamaLengkap}", null, false)
+                ->groupEnd();
+        }
+
+
+        // === COUNT DISTINCT pengguna ===
+        $count = clone $base;
+        $total = (int) $count
+            ->select('COUNT(DISTINCT pengguna.ID) AS total', false)
+            ->get()->getRow('total');
+
+        // === DATA LIST ===
+        $list = clone $base;
+        $list->select(
+            'pengguna.ID AS idPengguna,
+         pengguna.LOGIN AS userName,
+         master.getNamaLengkapPegawai(pengguna.NIP) AS namaLengkap,
+         (CASE WHEN pengguna.STATUS = 1 THEN "Aktif" ELSE "Tidak Aktif" END) AS status',
+            false
+        );
+        $list->select("GROUP_CONCAT(DISTINCT r.nama_role ORDER BY r.nama_role SEPARATOR '||') AS roles_concat", false);
+        $list->groupBy('pengguna.ID')->orderBy('pengguna.ID', 'ASC');
+
+        $rows = $list->limit($perPage, $offset)->get()->getResultArray();
+
+        if (empty($rows)) {
+            return ['status' => false];
+        }
+
+        // parse roles
+        $data = array_map(function ($row) {
+            $row['roles'] = !empty($row['roles_concat'])
+                ? array_values(array_filter(array_map('trim', explode('||', $row['roles_concat']))))
+                : [];
+            unset($row['roles_concat']);
+            return $row;
+        }, $rows);
+
+        return [
+            'status' => true,
+            'data' => [
+                'list'  => $data,
+                'total' => $total,
+                'page'  => $page,
+                'limit' => $perPage,
+            ],
+        ];
+    }
+
+
+
     public function getRolesWithPermissions(int $userId): array
     {
         $builder = $this->db->table('user_roles ur')
-            ->select('r.id role_id, r.nama_role, p.id AS permission_id, p.nama_permission')
-            ->join('roles r', 'r.id = ur.role_id')
+            ->select("
+            r.id  AS role_id,
+            r.nama_role,
+            GROUP_CONCAT(
+            DISTINCT TRIM(CONCAT(TRIM(f.`key`), '.', TRIM(m.`key`), '.', TRIM(p.action_key)))
+            ORDER BY f.`key`, m.`key`, p.action_key
+            SEPARATOR ','
+            ) AS permissions
+        ")
+            ->join('roles r', 'r.id = ur.role_id', 'inner')
             ->join('role_permissions rp', 'rp.role_id = r.id', 'left')
-            ->join('permissions p', 'p.id = rp.permission_id', 'left')
+            ->join('permissions p', 'p.id = rp.permission_id AND p.status = 1', 'left')
+            ->join('modules m', 'm.id = p.module_id AND m.status = 1', 'left')
+            ->join('features f', 'f.id = m.feature_id AND f.status = 1', 'left')
             ->where('ur.pengguna_id', $userId)
             ->where('r.status', 1)
-            ->where('p.status', 1)
-            ->orderBy('r.nama_role')
-            ->orderBy('p.nama_permission');
+            ->groupBy('r.id, r.nama_role');
 
-        $results = $builder->get()->getResultArray();
+        $rows = $builder->get()->getResultArray();
 
-        $roles = [];
-
-        foreach ($results as $row) {
-            $roleId = $row['role_id'];
-
-            if (!isset($roles[$roleId])) {
-                $roles[$roleId] = [
-                    'id' => $roleId,
-                    'name' => $row['nama_role'],
-                    'permissions' => [],
-                ];
-            }
-
-            if (!empty($row['permission_id'])) {
-                $roles[$roleId]['permissions'][] = $row['nama_permission'];
-            }
+        $out = [];
+        foreach ($rows as $row) {
+            $perms = $row['permissions']
+                ? array_values(array_filter(array_map('trim', explode(',', $row['permissions']))))
+                : [];
+            $out[] = [
+                'id'          => (int)$row['role_id'],
+                'name'        => $row['nama_role'],
+                'permissions' => $perms,
+            ];
         }
-
-        return array_values($roles);
+        return $out;
     }
+
 
     public function validasiPengguna($username, $password)
     {
@@ -138,6 +216,7 @@ class PenggunaService
     {
         $dataUser = [
             'id' => $user['ID'],
+            'username' => $user['LOGIN'],
             'namaLengkap' => "",
             'NIP' => $user['NIP'] ?? null,
         ];

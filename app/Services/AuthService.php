@@ -25,7 +25,7 @@ class AuthService
             'iss' => 'localhost',
             'aud' => 'localhost',
             'iat' => time(),
-            'exp' => time() + 60, // 15 minutes
+            'exp' => time() + 1000 * 60 * 15, // 15 minutes
             'uid' => $user['ID'],
             'roles' => $user['roles'],
         ];

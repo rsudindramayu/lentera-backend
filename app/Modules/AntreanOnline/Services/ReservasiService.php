@@ -3,23 +3,26 @@
 namespace App\Modules\AntreanOnline\Services;
 
 use App\Modules\AntreanOnline\Models\ReservasiModel;
+use App\Modules\BPJSAntrol\Services\AntreanService;
 use Config\Database;
 
 class ReservasiService
 {
     protected $reservasiModel;
+    protected $antreanService;
     protected $db;
 
     public function __construct()
     {
         $this->reservasiModel = new ReservasiModel();
-        $this->db = Database::connect();
+        $this->antreanService = new AntreanService();
+        $this->db = Database::connect('regonline');
     }
 
     public function getData($params)
     {
         $builder = $this->db->table('regonline.reservasi rr');
-        $builder->select('rr.id kodeBooking, rr.NORM norm, rr.NIK nik, rr.NAMA namaPasien, rr.TANGGALKUNJUNGAN tanggalKunjungan, mr.DESKRIPSI namaRuangan, master.getNamaLengkapPegawai(md.NIP) dokter, rr.STATUS status, rr.WAKTU_CHECK_IN checkIn');
+        $builder->select('rr.id kodeBooking, rr.NORM norm, rr.NIK nik, rr.NAMA namaPasien, rr.TANGGALKUNJUNGAN tanggalKunjungan, mr.DESKRIPSI namaRuangan, rr.NO_REF_BPJS noRefBPJS, master.getNamaLengkapPegawai(md.NIP) dokter, rr.STATUS status, rr.WAKTU_CHECK_IN checkIn');
         $builder->join('master.ruangan mr', 'mr.ID = rr.POLI', 'left');
         $builder->join('penjamin_rs.dpjp dp', 'dp.DPJP_PENJAMIN = rr.DOKTER', 'left');
         $builder->join('master.dokter md', 'md.ID = dp.DPJP_RS', 'left');
@@ -137,5 +140,46 @@ class ReservasiService
         }
 
         return ['status' => false];
+    }
+
+    public function batalkanReservasi($params)
+    {
+
+        if (isset($params['onBPJS']) && isset($params['onLocal'])) {
+            $batalkanDiBPJS = $this->antreanService->batalAntrean(['kodebooking' => $params['kodeBooking'], 'keterangan' => 'Terjadi perubahan jadwal atau dokter tidak praktik']);
+            if ($batalkanDiBPJS['status']) {
+                $this->db->table('regonline.reservasi')->where('ID', $params['kodeBooking'])->update(['STATUS' => 0, 'WAKTU_CHECK_IN' => null]);
+                return ['status' => true];
+            }
+            return $batalkanDiBPJS;
+        } else if (isset($params['onBPJS'])) {
+            $batalkanDiBPJS = $this->antreanService->batalAntrean(['kodebooking' => $params['kodeBooking'], 'keterangan' => 'Terjadi perubahan jadwal atau dokter tidak praktik']);
+            if ($batalkanDiBPJS['status']) {
+                return ['status' => true];
+            }
+            return $batalkanDiBPJS;
+        } else if (isset($params['onLocal'])) {
+            $this->db->table('regonline.reservasi')->where('ID', $params['kodeBooking'])->update(['STATUS' => 0, 'WAKTU_CHECK_IN' => null]);
+            return ['status' => true];
+        }
+    }
+
+    public function batalkanReservasiMassal($kodebookings)
+    {
+        $result = [
+            'berhasil' => [],
+            'gagal' => []
+        ];
+        foreach ($kodebookings as $kodebooking) {
+            $resultBatalDiBPJS = $this->antreanService->batalAntrean(['kodebooking' => $kodebooking, 'keterangan' => 'Terjadi perubahan jadwal atau dokter tidak praktik']);
+            if ($resultBatalDiBPJS['status']) {
+                $this->db->table('regonline.reservasi')->where('ID', $kodebooking)->update(['STATUS' => 0, 'WAKTU_CHECK_IN' => null]);
+                $result['berhasil'][] = $kodebooking;
+            } else {
+                $result['gagal'][] = $kodebooking;
+            }
+        }
+
+        return ['status' => true, 'data' => $result];
     }
 }
